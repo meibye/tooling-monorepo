@@ -8,6 +8,15 @@ set "REPO=%~1"
 set "KIND=%~2"
 set "NAME=%~3"
 
+:: Handle default repo if 'defrepo' is given
+if /I "%REPO%"=="defrepo" (
+    if exist "D:\" (
+        set "REPO=D:\Dev\tooling-monorepo"
+    ) else (
+        set "REPO=C:\Dev\tooling-monorepo"
+    )
+)
+
 if "%REPO%"=="" goto :usage
 if "%KIND%"=="" goto :usage
 if "%NAME%"=="" goto :usage
@@ -26,5 +35,5 @@ echo Created %KIND% tool skeleton at %REPO%\tools\%KIND%\%NAME%
 exit /b 0
 
 :usage
-echo Usage: %~nx0 ^<RepoRoot^> ^<Kind^> ^<Name^>
+echo Usage: %~nx0 ^<RepoRoot^|defrepo^> ^<Kind^> ^<Name^>
 exit /b 2

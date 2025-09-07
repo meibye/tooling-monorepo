@@ -1,10 +1,19 @@
 @echo off
 setlocal ENABLEEXTENSIONS
 
+:: Handle default repo if 'defrepo' is given
+set "REPO=%~1"
+if /I "%REPO%"=="defrepo" (
+    if exist "D:\" (
+        set "REPO=D:\Dev\tooling-monorepo"
+    ) else (
+        set "REPO=C:\Dev\tooling-monorepo"
+    )
+)
+
 :: Build a zip artifact from a relative path under the repo and compute SHA256
 :: Usage: build_zip.cmd <RepoRoot> <RelPath> <Name> <Version>
 :: Example: build_zip.cmd D:\Dev\tooling-monorepo plugins\onemore\ClipTools\src onemore-ClipTools 2025.09.01
-set "REPO=%~1"
 set "RELP=%~2"
 set "NAME=%~3"
 set "VER=%~4"
@@ -36,5 +45,5 @@ for /f "usebackq tokens=1-1 delims=" %%H in (`certutil -hashfile "%OUTZIP%" SHA2
 exit /b 0
 
 :usage
-echo Usage: %~nx0 ^<RepoRoot^> ^<RelPath^> ^<Name^> ^<Version^>
+echo Usage: %~nx0 ^<RepoRoot^|defrepo^> ^<RelPath^> ^<Name^> ^<Version^>
 exit /b 2

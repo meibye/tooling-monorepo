@@ -1,9 +1,18 @@
 @echo off
 setlocal ENABLEEXTENSIONS
 
+:: Handle default repo if 'defrepo' is given
+set "REPO=%~1"
+if /I "%REPO%"=="defrepo" (
+    if exist "D:\" (
+        set "REPO=D:\Dev\tooling-monorepo"
+    ) else (
+        set "REPO=C:\Dev\tooling-monorepo"
+    )
+)
+
 :: Initialize D:\Dev\tooling-monorepo folder structure
 :: Usage: init_monorepo.cmd [D:\Dev\tooling-monorepo]
-set "REPO=%~1"
 if "%REPO%"=="" set "REPO=D:\Dev\tooling-monorepo"
 
 for %%D in (
