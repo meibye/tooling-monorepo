@@ -1,1 +1,0 @@
-ClipTools plugin
