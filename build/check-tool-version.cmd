@@ -1,23 +1,14 @@
 @echo off
-set "SCRIPT_PATH=D:\Dev\meibye-bucket\scripts\check-tool-version.ps1"
-if not exist "%SCRIPT_PATH%" (
-    set "SCRIPT_PATH=C:\Dev\meibye-bucket\scripts\check-tool-version.ps1"
-)
+setlocal
 
-REM Echo which script will be run
-echo Running: %SCRIPT_PATH%
+REM Extract file name without extension
+set "CUR_FILE=%~nx0"
+for %%F in ("%CUR_FILE%") do set "CUR_FILE_NOEXT=%%~nF"
+call "%~dp0find-powershell-script.cmd" "%CUR_FILE_NOEXT%" "ps1" %*
 
-if exist "%SCRIPT_PATH%" (
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" %*
-) else (
-    echo Script not found on D: or C: drive.
-    exit /b 1
-)
-
-REM Check for errors
+REM Call the found script and check for errors
 if errorlevel 1 (
-    echo.
-    echo [ERROR] check-tool-version.ps1 failed.
+    echo [ERROR] Failed execution of "%~dp0find-powershell-script.cmd" "%CUR_FILE_NOEXT%" "ps1" %*.
     exit /b 1
 )
 
