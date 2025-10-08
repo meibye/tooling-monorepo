@@ -11,7 +11,7 @@
 .PARAMETER OnlyChanged
     Optional. If specified, only tools and plugins with changes since the last published version are built and published.
 .EXAMPLE
-    .\build-publish-tool.ps1 -Version 2024.06.01
+    .\build-publish-tool.ps1 -Version 1.1.0
     .\build-publish-tool.ps1 -OnlyChanged
 #>
 param(
@@ -66,7 +66,7 @@ foreach ($fam in $families) {
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
             Write-Host "Published $app ($fam) version $Version" -ForegroundColor Green
         } catch {
-            Write-Error "Failed to process $app ($fam): $_"
+            Write-Error "Failed to process $app ($fam): $_" -ForegroundColor Red
         }
     }
 }
@@ -106,7 +106,7 @@ if (Test-Path $pluginDir) {
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
             Write-Host "Published plugin $plugin (onemore) version $Version" -ForegroundColor Green
         } catch {
-            Write-Error "Failed to process plugin $plugin (onemore): $_"
+            Write-Error "Failed to process plugin $plugin (onemore): $_" -ForegroundColor Red
         }
     }
 }

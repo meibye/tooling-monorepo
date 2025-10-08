@@ -38,13 +38,12 @@ if /I "%REPO%"=="defrepo" (
 if "%REPO%"=="" set "REPO=D:\Dev\tooling-monorepo"
 
 for %%D in (
-  "plugins\onemore\ClipTools\src"
-  "plugins\onemore\TableTools\src"
-  "tools\ps\my-ps-tool\src"
-  "tools\py\my-py-tool\src"
-  "tools\cmd\my-cmd-tool\src"
-  "tools\bash\my-bash-tool\src"
-  "tools\zsh\my-zsh-tool\src"
+  "plugins\onemore"
+  "tools\ps"
+  "tools\py"
+  "tools\cmd"
+  "tools\bash"
+  "tools\zsh"
   "shared"
   "build"
   "out\artifacts"
@@ -63,34 +62,6 @@ for %%D in (
   echo Hosts OneMore plugins and standalone tools (PowerShell, Python, CMD, Bash, zsh).
 ) || (
   echo Failed to create README.md in %REPO%
-  exit /b 1
-)
-
-> "%REPO%\plugins\onemore\ClipTools\README.md" (
-  echo ClipTools plugin
-) || (
-  echo Failed to create README.md in plugins\onemore\ClipTools
-  exit /b 1
-)
-
-> "%REPO%\plugins\onemore\TableTools\README.md" (
-  echo TableTools plugin
-) || (
-  echo Failed to create README.md in plugins\onemore\TableTools
-  exit /b 1
-)
-
-> "%REPO%\tools\ps\my-ps-tool\README.md" (
-  echo PowerShell tool
-) || (
-  echo Failed to create README.md in tools\ps\my-ps-tool
-  exit /b 1
-)
-
-> "%REPO%\tools\py\my-py-tool\README.md" (
-  echo Python tool
-) || (
-  echo Failed to create README.md in tools\py\my-py-tool
   exit /b 1
 )
 
