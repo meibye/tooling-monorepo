@@ -55,6 +55,9 @@ This allows Scoop to discover and install tools described in the bucket's manife
 
 ## Script Overview
 
+- **find-powershell-script.cmd**  
+  Shared helper script used by other `.cmd` scripts to locate and run the corresponding PowerShell script, forwarding all user arguments correctly. Prefer using this for new `.cmd` wrappers.
+
 - **init_tools_root.cmd**  
   Initializes the `C:\Tools` directory structure for tool deployment (creates `apps\ps`, `apps\py`, etc.).
 
@@ -71,16 +74,24 @@ This allows Scoop to discover and install tools described in the bucket's manife
   Lists all developed tools in the monorepo, showing their family and app names in a formatted table.
 
 - **build-publish-tool.cmd / build-publish-tool.ps1**  
-  Builds and publishes all tools and plugins: zips their source folders, computes hashes, and updates or creates manifests in the local Scoop bucket.
+  Builds and publishes all tools and plugins: zips their source folders, computes hashes, and updates or creates manifests in the local Scoop bucket.  
+  The `.cmd` wrapper uses `find-powershell-script.cmd` to ensure correct argument passing.
 
 - **scan-update-bucket.cmd / scan-update-bucket.ps1**  
-  Scans the monorepo for new, updated, or deleted tools/plugins and updates the bucket manifests accordingly (removes obsolete manifests, adds new ones, and triggers builds for changed items).
+  Scans the monorepo for new, updated, or deleted tools/plugins and updates the bucket manifests accordingly (removes obsolete manifests, adds new ones, and triggers builds for changed items).  
+  Uses the shared PowerShell script runner for consistency.
 
 - **auto-update-tools.cmd / auto-update-tools.ps1**  
-  Checks all deployed tools against their manifests and updates them if a newer version is available (extracts new **artifacts** and updates symlinks).
+  Checks all deployed tools against their manifests and updates them if a newer version is available (extracts new **artifacts** and updates symlinks).  
+  Uses the shared PowerShell script runner.
 
 - **check-tool-version.cmd / check-tool-version.ps1**  
   Displays the version of a specified tool as defined in the bucket manifest and the currently deployed version.
+
+- **clean-published-artifacts.ps1**  
+  Deletes published manifests and artifacts from the bucket and `out\artifacts` folder.  
+  Lists only apps (tools/plugins) that currently have artifacts or manifests to delete, grouped by family, and asks for confirmation before proceeding.  
+  Supports an optional `-App` parameter to restrict deletion to a specific app.
 
 ## Development & Update Process for OneMore Plugins and Tools
 
@@ -111,6 +122,10 @@ This allows Scoop to discover and install tools described in the bucket's manife
    - Run `check-tool-version.cmd -App <AppName>`  
      Shows the version in the bucket and the currently deployed version.
 
+7. **Clean Publish Artifacts (Optional)**  
+   - Run `clean-published-artifacts.ps1 -App <AppName>`  
+     Deletes published artifacts and manifests for the specified app.
+
 ## Notes
 
 - **Do NOT add the `build/` folder to your PATH.** These scripts are for developer use only and are not intended for end-user installation.
@@ -126,9 +141,10 @@ init_monorepo.cmd defrepo
 new_onemore_plugin.cmd defrepo ClipTools
 new_tool_source.cmd defrepo py my-py-tool
 
-build-publish-tool.cmd -Version 2025.09.01
+build-publish-tool.cmd -Version 0.1.1
 scan-update-bucket.cmd
 
 auto-update-tools.cmd
 check-tool-version.cmd -App my-py-tool
+clean-publish-artifacts.ps1 -App my-py-tool
 ```

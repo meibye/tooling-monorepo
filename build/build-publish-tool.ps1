@@ -15,7 +15,7 @@
     .\build-publish-tool.ps1 -OnlyChanged
 #>
 param(
-    [string]$Version = "0.1.0",
+    [string]$Version,
     [switch]$OnlyChanged
 )
 
@@ -30,6 +30,26 @@ if (-not (Test-Path $bucket)) {
 }
 $outdir = "$repo\out\artifacts"
 
+function Get-LatestVersion {
+    param($name)
+    $versions = @()
+    if (Test-Path $outdir) {
+        $versions += Get-ChildItem -Path $outdir -Filter "$name-*.zip" | ForEach-Object {
+            if ($_.Name -match "$name-(.+)\.zip") { $matches[1] }
+        }
+    }
+    if (Test-Path "$bucket\$name.json") {
+        try {
+            $manifest = Get-Content "$bucket\$name.json" | ConvertFrom-Json
+            if ($manifest.version) { $versions += $manifest.version }
+        } catch {}
+    }
+    $versions = $versions | Where-Object { $_ } | Sort-Object -Descending
+    if ($versions.Count -gt 0) { return $versions[0] }
+    return "0.1.0"
+}
+
+# Determine effective version
 $families = @('ps','py','cmd','bash','zsh')
 foreach ($fam in $families) {
     $famdir = "$repo\tools\$fam"
@@ -38,10 +58,27 @@ foreach ($fam in $families) {
         $app = $_.Name
         $src = "$($_.FullName)\src"
         if (-not (Test-Path $src)) { return }
-        $zip = "$outdir\$app-$Version.zip"
+
+        # Version selection logic
+        $effectiveVersion = $null
+        if ($OnlyChanged) {
+            if ($Version) {
+                $effectiveVersion = $Version
+            } else {
+                $effectiveVersion = Get-LatestVersion $app
+            }
+        } else {
+            if ($Version) {
+                $effectiveVersion = $Version
+            } else {
+                $effectiveVersion = "0.1.0"
+            }
+        }
+
+        $zip = "$outdir\$app-$effectiveVersion.zip"
         try {
             if ($OnlyChanged -and (Test-Path $zip) -and ((Get-ChildItem $src -Recurse | Measure-Object -Property LastWriteTime -Maximum).Maximum -lt (Get-Item $zip).LastWriteTime)) {
-                Write-Host "Skipping $app (no changes)" -ForegroundColor Red
+                Write-Warning "Skipping $app (no changes)"
                 return
             }
             if (-not (Test-Path $outdir)) { New-Item -ItemType Directory -Force -Path $outdir | Out-Null }
@@ -54,7 +91,7 @@ foreach ($fam in $families) {
 
             # Write manifest
             $manifest = @{
-                version = $Version
+                version = $effectiveVersion
                 description = "$app ($fam tool)"
                 homepage = ""
                 license = "MIT"
@@ -64,7 +101,7 @@ foreach ($fam in $families) {
             }
             $manifestPath = "$bucket\$app.json"
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
-            Write-Host "Published $app ($fam) version $Version" -ForegroundColor Green
+            Write-Host "Published $app ($fam) version $effectiveVersion" -ForegroundColor Green
         } catch {
             Write-Error "Failed to process $app ($fam): $_"
         }
@@ -78,10 +115,27 @@ if (Test-Path $pluginDir) {
         $plugin = $_.Name
         $src = "$($_.FullName)\src"
         if (-not (Test-Path $src)) { return }
-        $zip = "$outdir\$plugin-$Version.zip"
+
+        # Version selection logic for plugins
+        $effectiveVersion = $null
+        if ($OnlyChanged) {
+            if ($Version) {
+                $effectiveVersion = $Version
+            } else {
+                $effectiveVersion = Get-LatestVersion $plugin
+            }
+        } else {
+            if ($Version) {
+                $effectiveVersion = $Version
+            } else {
+                $effectiveVersion = "0.1.0"
+            }
+        }
+
+        $zip = "$outdir\$plugin-$effectiveVersion.zip"
         try {
             if ($OnlyChanged -and (Test-Path $zip) -and ((Get-ChildItem $src -Recurse | Measure-Object -Property LastWriteTime -Maximum).Maximum -lt (Get-Item $zip).LastWriteTime)) {
-                Write-Host "Skipping plugin $plugin (no changes)" -ForegroundColor Red
+                Write-Warning "Skipping plugin $plugin (no changes)"
                 return
             }
             if (-not (Test-Path $outdir)) { New-Item -ItemType Directory -Force -Path $outdir | Out-Null }
@@ -94,7 +148,7 @@ if (Test-Path $pluginDir) {
             
             # Write manifest
             $manifest = @{
-                version = $Version
+                version = $effectiveVersion
                 description = "$plugin (onemore plugin)"
                 homepage = ""
                 license = "MIT"
@@ -104,7 +158,7 @@ if (Test-Path $pluginDir) {
             }
             $manifestPath = "$bucket\$plugin.json"
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
-            Write-Host "Published plugin $plugin (onemore) version $Version" -ForegroundColor Green
+            Write-Host "Published plugin $plugin (onemore) version $effectiveVersion" -ForegroundColor Green
         } catch {
             Write-Error "Failed to process plugin $plugin (onemore): $_"
         }

@@ -37,6 +37,19 @@ for %%D in (!UNIQUE_DRIVES!) do (
 
 endlocal & set "SCRIPT_PATH=%SCRIPT_PATH%"
 
+REM Remove first two arguments (script name and extension)
+shift
+shift
+
+REM Build argument string from remaining arguments
+set "PS_ARGS="
+:collect_args
+if "%~1"=="" goto run_ps
+set PS_ARGS=%PS_ARGS% %1
+shift
+goto collect_args
+
+:run_ps
 REM If script not found, print error and exit
 if not defined SCRIPT_PATH (
     echo [ERROR] Script not found on any drive.
@@ -46,17 +59,17 @@ if not defined SCRIPT_PATH (
 REM Print which script will be executed
 echo Running: %SCRIPT_PATH%
 
-REM Run the PowerShell script, passing all arguments after %2
-set "ARGS="
-if "%~3" neq "" (
-    set "ARGS=%*"
-    REM Remove first two arguments (script name and extension)
-    for /f "tokens=3,*" %%A in ("%ARGS%") do set "PS_ARGS=%%A %%B"
+REM Prefer pwsh.exe if available, fallback to powershell.exe
+where pwsh >nul 2>nul
+if %errorlevel%==0 (
+    set "PS_EXEC=pwsh"
 ) else (
-    set "PS_ARGS="
+    set "PS_EXEC=powershell"
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" %PS_ARGS%
+@REM echo %PS_EXEC% -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" %PS_ARGS%
+@REM pause
+%PS_EXEC% -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" %PS_ARGS%
 
 REM If PowerShell script failed, print error and exit
 if errorlevel 1 (
