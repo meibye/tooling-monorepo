@@ -66,7 +66,7 @@ foreach ($fam in $families) {
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
             Write-Host "Published $app ($fam) version $Version" -ForegroundColor Green
         } catch {
-            Write-Error "Failed to process $app ($fam): $_" -ForegroundColor Red
+            Write-Error "Failed to process $app ($fam): $_"
         }
     }
 }
@@ -106,7 +106,7 @@ if (Test-Path $pluginDir) {
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
             Write-Host "Published plugin $plugin (onemore) version $Version" -ForegroundColor Green
         } catch {
-            Write-Error "Failed to process plugin $plugin (onemore): $_" -ForegroundColor Red
+            Write-Error "Failed to process plugin $plugin (onemore): $_"
         }
     }
 }

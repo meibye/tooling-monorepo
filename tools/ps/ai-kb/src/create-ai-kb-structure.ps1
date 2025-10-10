@@ -11,8 +11,8 @@
     The drive letter where the ai-kb root folder will be created. Defaults to 'F'.
 
 .EXAMPLE
-    .\create_ai_kb_structure.ps1
-    .\create_ai_kb_structure.ps1 -Drive D
+    .\create-ai-kb-structure.ps1
+    .\create-ai-kb-structure.ps1 -Drive D
 #>
 
 param(
