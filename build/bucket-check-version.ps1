@@ -14,6 +14,28 @@ param(
     [string]$App
 )
 
+# --- argument validation ---
+$allowed = @('App')
+$invalid = @()
+if ($PSBoundParameters) {
+    $invalid += $PSBoundParameters.Keys | Where-Object { $allowed -notcontains $_ }
+}
+if ($args) {
+    foreach ($token in $args) {
+        if ($token -is [string] -and $token -match '^-{1,2}([^:=]+)') {
+            $paramName = $matches[1]
+            if ($allowed -notcontains $paramName) {
+                $invalid += $paramName
+            }
+        }
+    }
+}
+$invalid = $invalid | Select-Object -Unique
+if ($invalid.Count -gt 0) {
+    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -App"
+    exit 2
+}
+
 try {
     # Check bucket path
     $bucket = 'D:\Dev\meibye-bucket\bucket'

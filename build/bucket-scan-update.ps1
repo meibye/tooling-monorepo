@@ -1,11 +1,51 @@
 <#
 .SYNOPSIS
-    Updates the bucket manifests to match the current tools and plugins in the tooling-monorepo.
+    Update bucket manifests for tools and plugins in the tooling-monorepo.
+
 .DESCRIPTION
-    [bucket-scan-update.ps1] Scans the tooling-monorepo for available tools and plugins, removes obsolete manifests from the bucket directory, and invokes bucket-publish.ps1 to update or add manifests for new or changed items.
+    Scans the tooling-monorepo for tool and plugin directories, builds the current set of items,
+    removes obsolete JSON manifests from the bucket directory, and optionally invokes
+    bucket-publish.ps1 to regenerate manifests for new or changed items.
+    Detects tools in family directories (ps, py, cmd, bash, zsh) and plugins/onemore.
+    Uses fallback paths for repository and bucket locations (D:\... or C:\...).
+
+.PARAMETER NoPublish
+    When specified, skip calling bucket-publish.ps1. Only performs cleanup of obsolete manifests.
+
 .EXAMPLE
     .\bucket-scan-update.ps1
+    .\bucket-scan-update.ps1 -NoPublish
+
+.NOTES
+    - Exits with code 2 on invalid arguments.
+    - Errors are written to host with colored output; fatal errors cause exit 1.
 #>
+
+param(
+    [switch]$NoPublish
+)
+
+# --- argument validation ---
+$allowed = @('NoPublish')
+$invalid = @()
+if ($PSBoundParameters) {
+    $invalid += $PSBoundParameters.Keys | Where-Object { $allowed -notcontains $_ }
+}
+if ($args) {
+    foreach ($token in $args) {
+        if ($token -is [string] -and $token -match '^-{1,2}([^:=]+)') {
+            $paramName = $matches[1]
+            if ($allowed -notcontains $paramName) {
+                $invalid += $paramName
+            }
+        }
+    }
+}
+$invalid = $invalid | Select-Object -Unique
+if ($invalid.Count -gt 0) {
+    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -NoPublish"
+    exit 2
+}
 
 function Test-PathOrAlternate {
     param(
@@ -68,10 +108,12 @@ try {
     }
 
     # Optionally, call bucket-publish.ps1 for new/changed tools/plugins
-    try {
-        & "$PSScriptRoot\bucket-publish.ps1" -OnlyChanged
-    } catch {
-        Write-Host "Error running bucket-publish.ps1: $_" -ForegroundColor Red
+    if (-not $NoPublish) {
+        try {
+            & "$PSScriptRoot\bucket-publish.ps1" -OnlyChanged
+        } catch {
+            Write-Host "Error running bucket-publish.ps1: $_" -ForegroundColor Red
+        }
     }
 } catch {
     Write-Host "Fatal error: $_" -ForegroundColor Red

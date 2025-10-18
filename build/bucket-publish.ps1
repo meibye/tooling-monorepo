@@ -17,13 +17,38 @@
     .\bucket-publish.ps1 -Version 1.1.0
     .\bucket-publish.ps1 -OnlyChanged -CommitAndSync
 #>
-function Test-PathOrCDrive { param([string]$Path) if (Test-Path $Path) { return $Path } $cPath = $Path -replace '^[A-Za-z]:', 'C:'; if (Test-Path $cPath) { return $cPath } return $Path }
 
 param(
     [string]$Version,
     [switch]$OnlyChanged,
     [switch]$CommitAndSync
 )
+
+# --- argument validation ---
+$allowed = @('Version','OnlyChanged','CommitAndSync')
+$allowed = @($allowed)                # normalize allow-list to an array
+
+# Collect invalid parameter names from bound parameters and raw args (handles typos like -Veriosn)
+$invalid = @()
+if ($PSBoundParameters) {
+    $invalid += $PSBoundParameters.Keys | Where-Object { $allowed -notcontains $_ }
+}
+if ($args) {
+    foreach ($token in $args) {
+        if ($token -is [string] -and $token -match '^-{1,2}([^:=]+)') {
+            $paramName = $matches[1]
+            if ($allowed -notcontains $paramName) {
+                $invalid += $paramName
+            }
+        }
+    }
+}
+
+$invalid = $invalid | Select-Object -Unique
+if ($invalid.Count -gt 0) {
+    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -Version -OnlyChanged -CommitAndSync"
+    exit 2
+}
 
 $repo = 'D:\Dev\tooling-monorepo'
 $bucket = 'D:\Dev\meibye-bucket\bucket'
@@ -83,7 +108,7 @@ function Maybe-CommitAndSyncManifest {
             Write-Host "No git changes to commit for $Name" -ForegroundColor DarkGray
         }
     } catch {
-        Write-Warning "Git commit/sync failed for $Name: $_"
+        Write-Warning "Git commit/sync failed for ${Name}: $_"
     } finally {
         Pop-Location
     }

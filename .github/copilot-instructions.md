@@ -11,17 +11,17 @@ This monorepo manages the development, packaging, and deployment of cross-platfo
 
 ## Essential Workflows
 - **Scaffold a new tool:**
-  - Run `build/new_tool_source.cmd defrepo <Family> <App> [Tool]` to create a new tool skeleton.
+  - Run `build/dev-new-tool.cmd defrepo <Family> <App> [Tool]` to create a new tool skeleton.
 - **Scaffold a new plugin:**
-  - Run `build/new_onemore_plugin.cmd defrepo <PluginName>`.
+  - Run `build/dev-new-plugin.cmd defrepo <PluginName>`.
 - **Build & publish:**
-  - Use `build/build-publish-tool.cmd` or `.ps1` to zip sources, compute hashes, and update manifests.
+  - Use `build/bucket-publish.cmd` or `.ps1` to zip sources, compute hashes, and update manifests.
 - **Update bucket:**
-  - Use `build/scan-update-bucket.cmd` or `.ps1` to sync manifests with source changes.
+  - Use `build/bucket-scan-update.cmd` or `.ps1` to sync manifests with source changes.
 - **Auto-update deployed tools:**
-  - Use `build/auto-update-tools.cmd` or `.ps1` to update installed tools based on manifest versions.
+  - Use `build/bucket-auto-update.cmd` or `.ps1` to update installed tools based on manifest versions.
 - **List all tools:**
-  - Run `build/list_tools.cmd` for a summary table.
+  - Run `build/dev-list-tools.cmd` for a summary table.
 
 ## Conventions & Patterns
 - **Tool structure:** Each tool/plugin lives in its own folder under the appropriate family, with all code in `src/`.
@@ -39,4 +39,4 @@ This monorepo manages the development, packaging, and deployment of cross-platfo
 
 ## Examples
 - To move a window to the next desktop, see `tools/ps/MoveWindowToNextDesktop/src/README.md` for PowerShell and PowerToys integration.
-- To add a new Python tool: `build/new_tool_source.cmd defrepo py my-py-tool` then edit `tools/py/my-py-tool/src/`.
+- To add a new Python tool: `build/dev-new-tool.cmd defrepo py my-py-tool` then edit `tools/py/my-py-tool/src/`.
