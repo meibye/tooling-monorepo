@@ -3,11 +3,13 @@
     Automatically updates tools by syncing deployed versions with manifest files.
 
 .DESCRIPTION
-    This script scans a bucket directory for JSON manifest files describing tool versions and artifacts.
+    [bucket-auto-update.ps1] Scans a bucket directory for JSON manifest files describing tool versions and artifacts.
     For each tool, it checks the currently deployed version in the apps directory. If the deployed version
     differs from the manifest version, it extracts the new artifact, updates the directory structure, and
     manages symlinks to point to the latest version. The script supports fallback between drive letters
     (e.g., D: to C:) for flexibility across environments.
+    If Scoop is available and the app is managed in Scoop, the script will prefer installing/updating into
+    the Scoop apps folder (and attempt a lightweight shim reset) instead of the monorepo apps location.
 
 .PARAMETER Path
     The path to check for existence, with fallback to C: drive if not found.
@@ -19,7 +21,7 @@
     - Designed for use in a monorepo tooling environment.
 
 .EXAMPLE
-    .\auto-update-tools.ps1
+    .\bucket-auto-update.ps1
     Runs the script to update all tools according to their manifests.
 #>
 function Test-OrCDrive {
@@ -34,22 +36,56 @@ $bucket = Test-OrCDrive 'D:\Dev\meibye-bucket\bucket'
 $toolsRoot = Test-OrCDrive 'D:\Dev\tooling-monorepo\tools'
 $appsRoot = Test-OrCDrive 'C:\Tools\apps'
 
+# Detect Scoop (prefer using Scoop-managed apps when present)
+$scoopCmd = Get-Command scoop -ErrorAction SilentlyContinue
+if ($scoopCmd -or $env:SCOOP) {
+    $scoopRoot = if ($env:SCOOP) { $env:SCOOP } else { Join-Path $env:USERPROFILE 'scoop' }
+    $scoopApps = Join-Path $scoopRoot 'apps'
+} else {
+    $scoopApps = $null
+}
+
 Get-ChildItem "$bucket\*.json" -ErrorAction Stop | ForEach-Object {
     try {
         $man = Get-Content $_.FullName -ErrorAction Stop | ConvertFrom-Json
         $app = $_.BaseName
         $ver = $man.version
 
-        # Check deployed version
-        $deployed = Get-ChildItem "$appsRoot\*\$app\current" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+        # Determine currently deployed version (check Scoop location first, then appsRoot)
+        $deployed = $null
+        if ($scoopApps) {
+            $scoopCurrent = Join-Path $scoopApps "$app\current"
+            if (Test-Path $scoopCurrent) {
+                try { $deployed = Get-Item $scoopCurrent -ErrorAction Stop } catch {}
+            }
+        }
+        if (-not $deployed) {
+            $deployed = Get-ChildItem "$appsRoot\*\$app\current" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+        }
         $curver = if ($deployed) { Split-Path ($deployed.Target) -Leaf } else { "" }
-        if ($curver -ne $ver) {
-            Write-Host "Updating $app from $curver to $ver" -ForegroundColor Yellow
 
-            # Simulate install: unzip artifact to C:\Tools\apps\<family>\<app>\<ver>
+        # Decide whether to use Scoop-managed path
+        $useScoop = $false
+        if ($scoopApps -and (Test-Path (Join-Path $scoopApps $app))) { $useScoop = $true }
+
+        if ($curver -ne $ver) {
+            if ($useScoop) {
+                Write-Host "Updating (scoop) $app from $curver to $ver" -ForegroundColor Yellow
+            } else {
+                Write-Host "Updating $app from $curver to $ver" -ForegroundColor Yellow
+            }
+
+            # Determine destination based on Scoop vs monorepo apps root
             $zip = $man.url -replace '^file:///',''
-            $fam = (Get-ChildItem "$toolsRoot\*" -ErrorAction Stop | Where-Object { Test-Path "$($_.FullName)\$app" }).Name
-            $dest = "$appsRoot\$fam\$app\$ver"
+            if ($useScoop) {
+                $dest = Join-Path $scoopApps "$app\$ver"
+                $cur = Join-Path $scoopApps "$app\current"
+            } else {
+                $fam = (Get-ChildItem "$toolsRoot\*" -ErrorAction Stop | Where-Object { Test-Path "$($_.FullName)\$app" }).Name
+                $dest = Join-Path "$appsRoot\$fam\$app" $ver
+                $cur = Join-Path "$appsRoot\$fam\$app" 'current'
+            }
+
             if (-not (Test-Path $dest)) {
                 try {
                     New-Item -ItemType Directory -Force -Path $dest | Out-Null
@@ -65,8 +101,7 @@ Get-ChildItem "$bucket\*.json" -ErrorAction Stop | ForEach-Object {
                 return
             }
 
-            # Update symlink
-            $cur = "$appsRoot\$fam\$app\current"
+            # Update symlink (either in scoop apps folder or in appsRoot)
             try {
                 if (Test-Path $cur) { Remove-Item $cur -Force }
             } catch {
@@ -79,6 +114,17 @@ Get-ChildItem "$bucket\*.json" -ErrorAction Stop | ForEach-Object {
                 Write-Host "Failed to create symlink ${cur}: $_" -ForegroundColor Red
                 return
             }
+
+            # If Scoop is present, attempt to refresh shims for this app (best-effort)
+            if ($useScoop -and $scoopCmd) {
+                try {
+                    cmd /c scoop reset $app > $null 2>&1
+                } catch {
+                    # non-fatal; just log verbose
+                    Write-Host "scoop reset $app failed or is unavailable (non-fatal)" -ForegroundColor DarkYellow
+                }
+            }
+
             Write-Host "Installed $app $ver" -ForegroundColor Green
         }
     } catch {

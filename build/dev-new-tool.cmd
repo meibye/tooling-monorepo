@@ -2,12 +2,12 @@
 setlocal ENABLEEXTENSIONS
 
 :: -----------------------------------------------------------------------------
-:: new_tool_source.cmd
+:: dev-new-tool.cmd
 ::
 :: Scaffolds a new standalone tool or adds a tool to a tool group in the monorepo.
 ::
 :: Usage:
-::   new_tool_source.cmd <RepoRoot|defrepo> <Family> <App> [Tool]
+::   dev-new-tool.cmd <RepoRoot|defrepo> <Family> <App> [Tool]
 ::
 :: Parameters:
 ::   RepoRoot   - Root path of the repo, or 'defrepo' to auto-select D: or C:.
@@ -21,8 +21,8 @@ setlocal ENABLEEXTENSIONS
 ::   - Creates or appends to a README.md in the tool group folder.
 ::
 :: Examples:
-::   new_tool_source.cmd defrepo ps ai_kb
-::   new_tool_source.cmd D:\Dev\tooling-monorepo py ingest_tools ingest_pdf
+::   dev-new-tool.cmd defrepo ps ai_kb
+::   dev-new-tool.cmd D:\Dev\tooling-monorepo py ingest_tools ingest_pdf
 :: -----------------------------------------------------------------------------
 
 set "REPO=%~1"

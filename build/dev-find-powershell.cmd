@@ -1,7 +1,8 @@
 @echo off
 setlocal
 
-REM Arguments: %1 = script file name without extension (e.g., auto-update-tools)
+REM dev-find-powershell.cmd: Helper to locate and run PowerShell scripts for dev/bucket scripts
+REM Arguments: %1 = script file name without extension (e.g., bucket-auto-update)
 REM            %2 = script file extension (e.g., ps1)
 REM            %3... = arguments to pass to PowerShell script
 

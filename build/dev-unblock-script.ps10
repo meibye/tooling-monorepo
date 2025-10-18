@@ -3,13 +3,13 @@
     Unblocks a specified file to allow script execution.
 
 .DESCRIPTION
-    This script takes a file path as a parameter, verifies the file exists, and removes the "blocked" status (Zone.Identifier) from the file using Unblock-File. This is useful for enabling execution of scripts downloaded from the internet.
+    [dev-unblock-script.ps1] Takes a file path as a parameter, verifies the file exists, and removes the "blocked" status (Zone.Identifier) from the file using Unblock-File. This is useful for enabling execution of scripts downloaded from the internet.
 
 .PARAMETER Path
     The path to the file to unblock.
 
 .EXAMPLE
-    .\unblock-script.ps1 -Path 'C:\path\to\file.ps1'
+    .\dev-unblock-script.ps1 -Path 'C:\path\to\file.ps1'
 #>
 
 param(

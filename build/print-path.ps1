@@ -1,1 +1,0 @@
-$env:PATH -split ';' | ForEach-Object { Write-Host $_ }

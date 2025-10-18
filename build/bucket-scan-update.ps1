@@ -2,9 +2,9 @@
 .SYNOPSIS
     Updates the bucket manifests to match the current tools and plugins in the tooling-monorepo.
 .DESCRIPTION
-    Scans the tooling-monorepo for available tools and plugins, removes obsolete manifests from the bucket directory, and invokes build-publish-tool.ps1 to update or add manifests for new or changed items.
+    [bucket-scan-update.ps1] Scans the tooling-monorepo for available tools and plugins, removes obsolete manifests from the bucket directory, and invokes bucket-publish.ps1 to update or add manifests for new or changed items.
 .EXAMPLE
-    .\scan-update-bucket.ps1
+    .\bucket-scan-update.ps1
 #>
 
 function Test-PathOrAlternate {
@@ -67,11 +67,11 @@ try {
         Write-Host "Error processing manifests in ${bucket}: $_" -ForegroundColor Red
     }
 
-    # Optionally, call build-publish-tool.ps1 for new/changed tools/plugins
+    # Optionally, call bucket-publish.ps1 for new/changed tools/plugins
     try {
-        & "$PSScriptRoot\build-publish-tool.ps1" -OnlyChanged
+        & "$PSScriptRoot\bucket-publish.ps1" -OnlyChanged
     } catch {
-        Write-Host "Error running build-publish-tool.ps1: $_" -ForegroundColor Red
+        Write-Host "Error running bucket-publish.ps1: $_" -ForegroundColor Red
     }
 } catch {
     Write-Host "Fatal error: $_" -ForegroundColor Red

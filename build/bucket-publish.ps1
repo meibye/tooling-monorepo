@@ -2,21 +2,27 @@
 .SYNOPSIS
     Builds and publishes all tools and plugins from tooling-monorepo to the local bucket.
 .DESCRIPTION
-    For each tool and plugin, compresses the contents of its src folder into a zip archive, computes a SHA256 hash, and generates or updates a manifest JSON file in the bucket directory.
+    [bucket-publish.ps1] For each tool and plugin, compresses the contents of its src folder into a zip archive, computes a SHA256 hash, and generates or updates a manifest JSON file in the bucket directory.
     The manifest includes version, description, license, URL to the zip, hash, and a list of executable files found in the src folder.
     Supports incremental publishing: if -OnlyChanged is specified, only tools and plugins with changes since the last published version are processed (based on file modification times).
     Handles tools in the tools directory (for families: ps, py, cmd, bash, zsh) and plugins in plugins\onemore.
+    Optionally, when -CommitAndSync is provided, the script will attempt to git add/commit/pull/push the created or updated manifest in the bucket repository (best-effort).
 .PARAMETER Version
     Optional. The version string to use for published artifacts. Defaults to "0.1.0".
 .PARAMETER OnlyChanged
     Optional. If specified, only tools and plugins with changes since the last published version are built and published.
+.PARAMETER CommitAndSync
+    Optional. If specified, after writing each manifest the script will attempt to git add/commit/pull/push the manifest file in the bucket directory.
 .EXAMPLE
-    .\build-publish-tool.ps1 -Version 1.1.0
-    .\build-publish-tool.ps1 -OnlyChanged
+    .\bucket-publish.ps1 -Version 1.1.0
+    .\bucket-publish.ps1 -OnlyChanged -CommitAndSync
 #>
+function Test-PathOrCDrive { param([string]$Path) if (Test-Path $Path) { return $Path } $cPath = $Path -replace '^[A-Za-z]:', 'C:'; if (Test-Path $cPath) { return $cPath } return $Path }
+
 param(
     [string]$Version,
-    [switch]$OnlyChanged
+    [switch]$OnlyChanged,
+    [switch]$CommitAndSync
 )
 
 $repo = 'D:\Dev\tooling-monorepo'
@@ -47,6 +53,40 @@ function Get-LatestVersion {
     $versions = $versions | Where-Object { $_ } | Sort-Object -Descending
     if ($versions.Count -gt 0) { return $versions[0] }
     return "0.1.0"
+}
+
+# New helper: optionally git add/commit/pull/push the manifest in the bucket repo
+function Maybe-CommitAndSyncManifest {
+    param(
+        [string]$ManifestPath,
+        [string]$Name,
+        [string]$Version
+    )
+    if (-not $CommitAndSync) { return }
+    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $gitCmd) {
+        Write-Warning "git not found on PATH; skipping commit/sync for $Name"
+        return
+    }
+    try {
+        Push-Location $bucket
+        # Use relative path when adding
+        $relPath = Split-Path $ManifestPath -Leaf
+        & git add $relPath 2>$null
+        $porcelain = (& git status --porcelain) -join "`n"
+        if ($porcelain) {
+            & git commit -m "Publish $Name version $Version" --no-verify 2>$null
+            try { & git pull --rebase --autostash 2>$null } catch {}
+            try { & git push 2>$null } catch {}
+            Write-Host "Committed and pushed manifest for $Name" -ForegroundColor Cyan
+        } else {
+            Write-Host "No git changes to commit for $Name" -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Warning "Git commit/sync failed for $Name: $_"
+    } finally {
+        Pop-Location
+    }
 }
 
 # Determine effective version
@@ -102,6 +142,9 @@ foreach ($fam in $families) {
             $manifestPath = "$bucket\$app.json"
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
             Write-Host "Published $app ($fam) version $effectiveVersion" -ForegroundColor Green
+
+            # Optionally commit and sync the manifest
+            Maybe-CommitAndSyncManifest -ManifestPath $manifestPath -Name $app -Version $effectiveVersion
         } catch {
             Write-Error "Failed to process $app ($fam): $_"
         }
@@ -159,6 +202,9 @@ if (Test-Path $pluginDir) {
             $manifestPath = "$bucket\$plugin.json"
             $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8 -ErrorAction Stop
             Write-Host "Published plugin $plugin (onemore) version $effectiveVersion" -ForegroundColor Green
+
+            # Optionally commit and sync the manifest
+            Maybe-CommitAndSyncManifest -ManifestPath $manifestPath -Name $plugin -Version $effectiveVersion
         } catch {
             Write-Error "Failed to process plugin $plugin (onemore): $_"
         }

@@ -2,11 +2,11 @@
 .SYNOPSIS
     Displays the version of a specified tool as defined in the bucket manifest and the currently deployed version.
 .DESCRIPTION
-    This script checks the version of a given tool/app by reading its manifest from a local bucket directory and compares it to the version currently deployed in the apps directory.
+    [bucket-check-version.ps1] Checks the version of a given tool/app by reading its manifest from a local bucket directory and compares it to the version currently deployed in the apps directory.
 .PARAMETER App
     The name of the tool/app to check (without file extension).
 .EXAMPLE
-    .\check-tool-version.ps1 -App my-ps-tool
+    .\bucket-check-version.ps1 -App my-ps-tool
     Shows the version in the bucket and the deployed version for 'my-ps-tool'.
 #>
 param(

@@ -2,21 +2,21 @@
 setlocal ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 
 :: -----------------------------------------------------------------------------
-:: list_tools.cmd
+:: dev-list-tools.cmd
 ::
 :: Lists all developed tools in the tools folder, presenting them as columns:
 :: Family | App (App column width is dynamic)
 ::
 :: Usage:
-::   list_tools.cmd [<RepoRoot|defrepo>]
+::   dev-list-tools.cmd [<RepoRoot|defrepo>]
 ::
 :: Parameters:
 ::   [RepoRoot|defrepo] - Optional root path of the repo, or 'defrepo' to auto-select D: or C:.
 ::
 :: Example:
-::   list_tools.cmd
-::   list_tools.cmd defrepo
-::   list_tools.cmd D:\Dev\tooling-monorepo
+::   dev-list-tools.cmd
+::   dev-list-tools.cmd defrepo
+::   dev-list-tools.cmd D:\Dev\tooling-monorepo
 :: -----------------------------------------------------------------------------
 
 set "REPO=%~1"

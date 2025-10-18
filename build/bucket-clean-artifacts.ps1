@@ -2,13 +2,13 @@
 .SYNOPSIS
     Deletes published manifests and artifacts from the bucket and out\artifacts folder.
 .DESCRIPTION
-    Lists only impacted apps (tools and plugins) grouped by family that currently have artifacts or manifests to delete, then asks for user confirmation before proceeding.
+    [bucket-clean-artifacts.ps1] Lists only impacted apps (tools and plugins) grouped by family that currently have artifacts or manifests to delete, then asks for user confirmation before proceeding.
     If an App is specified, only deletes artifacts and manifests for that app.
 .PARAMETER App
     Optional. If specified, only deletes artifacts and manifests for the given app (tool or plugin).
 .EXAMPLE
-    .\clean-published-artifacts.ps1
-    .\clean-published-artifacts.ps1 -App mytool
+    .\bucket-clean-artifacts.ps1
+    .\bucket-clean-artifacts.ps1 -App mytool
 #>
 param(
     [string]$App

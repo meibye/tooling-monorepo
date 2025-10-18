@@ -2,12 +2,12 @@
 setlocal ENABLEEXTENSIONS
 
 :: -----------------------------------------------------------------------------
-:: init_monorepo.cmd
+:: dev-init-monorepo.cmd
 ::
 :: Initializes the D:\Dev\tooling-monorepo folder structure for plugins and tools.
 ::
 :: Usage:
-::   init_monorepo.cmd [D:\Dev\tooling-monorepo|defrepo]
+::   dev-init-monorepo.cmd [D:\Dev\tooling-monorepo|defrepo]
 ::
 :: Parameters:
 ::   [D:\Dev\tooling-monorepo|defrepo] - Optional repo root, or 'defrepo' to auto-select D: or C:.
@@ -18,9 +18,9 @@ setlocal ENABLEEXTENSIONS
 ::   - Handles errors for directory and file creation.
 ::
 :: Example:
-::   init_monorepo.cmd
-::   init_monorepo.cmd defrepo
-::   init_monorepo.cmd C:\Dev\tooling-monorepo
+::   dev-init-monorepo.cmd
+::   dev-init-monorepo.cmd defrepo
+::   dev-init-monorepo.cmd C:\Dev\tooling-monorepo
 :: -----------------------------------------------------------------------------
 
 :: Handle default repo if 'defrepo' is given

@@ -1,14 +1,16 @@
 @echo off
 setlocal
 
+REM bucket-scan-update.cmd: Wrapper for bucket-scan-update.ps1
+
 REM Extract file name without extension
 set "CUR_FILE=%~nx0"
 for %%F in ("%CUR_FILE%") do set "CUR_FILE_NOEXT=%%~nF"
-call "%~dp0find-powershell-script.cmd" "%CUR_FILE_NOEXT%" "ps1" %*
+call "%~dp0dev-find-powershell.cmd" "%CUR_FILE_NOEXT%" "ps1" %*
 
 REM Call the found script and check for errors
 if errorlevel 1 (
-    echo [ERROR] Failed execution of "%~dp0find-powershell-script.cmd" "%CUR_FILE_NOEXT%" "ps1" %*.
+    echo [ERROR] Failed execution of "%~dp0dev-find-powershell.cmd" "%CUR_FILE_NOEXT%" "ps1" %*.
     exit /b 1
 )
 

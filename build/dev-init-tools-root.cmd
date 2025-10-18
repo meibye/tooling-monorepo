@@ -2,12 +2,12 @@
 setlocal ENABLEEXTENSIONS
 
 :: -----------------------------------------------------------------------------
-:: init_tools_root.cmd
+:: dev-init-tools-root.cmd
 ::
 :: Initializes C:\Tools base directories for various tool families.
 ::
 :: Usage:
-::   init_tools_root.cmd [C:\Tools]
+::   dev-init-tools-root.cmd [C:\Tools]
 ::
 :: Parameters:
 ::   [C:\Tools]  - Optional root path for tools (default: C:\Tools)
@@ -17,8 +17,8 @@ setlocal ENABLEEXTENSIONS
 ::   - Handles errors for directory creation.
 ::
 :: Example:
-::   init_tools_root.cmd
-::   init_tools_root.cmd D:\Tools
+::   dev-init-tools-root.cmd
+::   dev-init-tools-root.cmd D:\Tools
 :: -----------------------------------------------------------------------------
 
 set "ROOT=%~1"

@@ -2,12 +2,12 @@
 setlocal ENABLEEXTENSIONS
 
 :: -----------------------------------------------------------------------------
-:: new_onemore_plugin.cmd
+:: dev-new-plugin.cmd
 ::
 :: Scaffolds a new OneMore plugin source tree.
 ::
 :: Usage:
-::   new_onemore_plugin.cmd <RepoRoot|defrepo> <PluginName>
+::   dev-new-plugin.cmd <RepoRoot|defrepo> <PluginName>
 ::
 :: Parameters:
 ::   RepoRoot    - Root path of the repo, or 'defrepo' to auto-select D: or C:.
@@ -19,8 +19,8 @@ setlocal ENABLEEXTENSIONS
 ::   - Handles errors for directory and file creation.
 ::
 :: Example:
-::   new_onemore_plugin.cmd defrepo myplugin
-::   new_onemore_plugin.cmd D:\Dev\tooling-monorepo testplugin
+::   dev-new-plugin.cmd defrepo myplugin
+::   dev-new-plugin.cmd D:\Dev\tooling-monorepo testplugin
 :: -----------------------------------------------------------------------------
 
 set "REPO=%~1"
