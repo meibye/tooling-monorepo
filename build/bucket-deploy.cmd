@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-REM bucket-auto-update.cmd: Wrapper for bucket-auto-update.ps1
+REM bucket-deploy.cmd: Wrapper for bucket-deploy.ps1
 
 REM Extract file name without extension
 set "CUR_FILE=%~nx0"

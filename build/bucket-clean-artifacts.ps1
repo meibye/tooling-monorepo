@@ -2,20 +2,30 @@
 .SYNOPSIS
     Deletes published manifests and artifacts from the bucket and out\artifacts folder.
 .DESCRIPTION
-    [bucket-clean-artifacts.ps1] Lists only impacted apps (tools and plugins) grouped by family that currently have artifacts or manifests to delete, then asks for user confirmation before proceeding.
-    If an App is specified, only deletes artifacts and manifests for that app.
+    [bucket-clean-artifacts.ps1] Deletes published manifests (per tool) and artifacts (per app) from the bucket and out\artifacts folder.
+    Uses dev-filter-tool.ps1 to filter tools by Family, App, and Tool arguments (wildcard "*" supported).
+    Lists only impacted tools grouped by family and app, then asks for user confirmation before proceeding.
+    Supports combined filtering by Family, App, and Tool.
+.PARAMETER Family
+    Optional. Tool type: ps, py, cmd, bash, zsh, plugin. Wildcard "*" for all. Filters by family.
 .PARAMETER App
-    Optional. If specified, only deletes artifacts and manifests for the given app (tool or plugin).
+    Optional. App folder name. Wildcard "*" for all. Filters by app name across all families.
+.PARAMETER Tool
+    Optional. Name for the tool source file incl extension. Wildcard "*" for all. Filters by tool filename.
 .EXAMPLE
     .\bucket-clean-artifacts.ps1
-    .\bucket-clean-artifacts.ps1 -App mytool
+    .\bucket-clean-artifacts.ps1 -App tools
+    .\bucket-clean-artifacts.ps1 -Family ps -App myapp -Tool mytool.ps1
+    .\bucket-clean-artifacts.ps1 -Family plugin -App myplugin -Tool example.ps1
 #>
 param(
-    [string]$App
+    [string]$Family = "*",
+    [string]$App = "*",
+    [string]$Tool = "*"
 )
 
 # --- argument validation ---
-$allowed = @('App')
+$allowed = @('App','Family','Tool')
 $invalid = @()
 if ($PSBoundParameters) {
     $invalid += $PSBoundParameters.Keys | Where-Object { $allowed -notcontains $_ }
@@ -32,7 +42,7 @@ if ($args) {
 }
 $invalid = $invalid | Select-Object -Unique
 if ($invalid.Count -gt 0) {
-    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -App"
+    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -Family -App -Tool"
     exit 2
 }
 
@@ -40,92 +50,21 @@ $repo = 'D:\Dev\tooling-monorepo'
 $bucket = 'D:\Dev\meibye-bucket\bucket'
 $outdir = "$repo\out\artifacts"
 
-if (-not (Test-Path $repo)) {
-    $repo = 'C:\Dev\tooling-monorepo'
-}
-if (-not (Test-Path $bucket)) {
-    $bucket = 'C:\Dev\meibye-bucket\bucket'
-}
+if (-not (Test-Path $repo)) { $repo = 'C:\Dev\tooling-monorepo' }
+if (-not (Test-Path $bucket)) { $bucket = 'C:\Dev\meibye-bucket\bucket' }
 
-$families = @('ps','py','cmd','bash','zsh')
+# Use dev-filter-tool.ps1 to get filtered tools from bucket manifests
+$filterScript = Join-Path $PSScriptRoot 'dev-filter-tool.ps1'
+$filteredTools = & $filterScript -Type bucket -Location $bucket -Family $Family -App $App -Tool $Tool
 
-# Gather impacted apps (only those with artifacts or manifests to delete)
-$impactedApps = @{}
-$impactedPlugins = @()
-if ($App) {
-    $found = $false
-    foreach ($fam in $families) {
-        $famdir = "$repo\tools\$fam"
-        if (Test-Path "$famdir\$App") {
-            $manifestPath = "$bucket\$App.json"
-            $artifactExists = (Test-Path $manifestPath) -or (Test-Path $outdir -and (Get-ChildItem -Path $outdir -Filter "$App-*.zip" | Where-Object { $_ }))
-            if ($artifactExists) {
-                $impactedApps[$fam] = @($App)
-            }
-            $found = $true
-        }
-    }
-    $pluginDir = "$repo\plugins\onemore"
-    if (Test-Path "$pluginDir\$App") {
-        $manifestPath = "$bucket\$App.json"
-        $artifactExists = (Test-Path $manifestPath) -or (Test-Path $outdir -and (Get-ChildItem -Path $outdir -Filter "$App-*.zip" | Where-Object { $_ }))
-        if ($artifactExists) {
-            $impactedPlugins = @($App)
-        }
-        $found = $true
-    }
-    if (-not $found) {
-        Write-Host "App '$App' not found in any family or plugins." -ForegroundColor Red
-        exit 1
-    }
-} else {
-    foreach ($fam in $families) {
-        $famdir = "$repo\tools\$fam"
-        if (Test-Path $famdir) {
-            $apps = Get-ChildItem -Path $famdir -Directory | Select-Object -ExpandProperty Name
-            $appsToClean = @()
-            foreach ($app in $apps) {
-                $manifestPath = "$bucket\$app.json"
-                $artifactExists = (Test-Path $manifestPath) -or ((Test-Path $outdir) -and (Get-ChildItem -Path $outdir -Filter "$app-*.zip" | Where-Object { $_ }))
-                if ($artifactExists) {
-                    $appsToClean += $app
-                }
-            }
-            if ($appsToClean.Count -gt 0) {
-                $impactedApps[$fam] = $appsToClean
-            }
-        }
-    }
-    $pluginDir = "$repo\plugins\onemore"
-    if (Test-Path $pluginDir) {
-        $plugins = Get-ChildItem -Path $pluginDir -Directory | Select-Object -ExpandProperty Name
-        foreach ($plugin in $plugins) {
-            $manifestPath = "$bucket\$plugin.json"
-            $artifactExists = (Test-Path $manifestPath) -or ((Test-Path $outdir) -and (Get-ChildItem -Path $outdir -Filter "$plugin-*.zip" | Where-Object { $_ }))
-            if ($artifactExists) {
-                $impactedPlugins += $plugin
-            }
-        }
-    }
-}
-
-if (($impactedApps.Count -eq 0) -and ($impactedPlugins.Count -eq 0)) {
-    Write-Host "No impacted apps found. Nothing to delete." -ForegroundColor Cyan
+if (-not $filteredTools -or $filteredTools.Count -eq 0) {
+    Write-Host "No impacted tools found. Nothing to delete." -ForegroundColor Cyan
     exit 0
 }
 
-Write-Host "The following apps will be cleaned:" -ForegroundColor Magenta
-foreach ($fam in $impactedApps.Keys) {
-    Write-Host "Family: $fam" -ForegroundColor Magenta
-    foreach ($app in $impactedApps[$fam]) {
-        Write-Host "  $app" -ForegroundColor Magenta
-    }
-}
-if ($impactedPlugins.Count -gt 0) {
-    Write-Host "Plugins (onemore):" -ForegroundColor Magenta
-    foreach ($plugin in $impactedPlugins) {
-        Write-Host "  $plugin" -ForegroundColor Magenta
-    }
+Write-Host "The following tools will be cleaned:" -ForegroundColor Magenta
+foreach ($toolObj in $filteredTools) {
+    Write-Host "Family: $($toolObj.Family)  App: $($toolObj.App)  Tool: $($toolObj.Tool)" -ForegroundColor Magenta
 }
 
 $confirmation = Read-Host "Proceed with deletion? (y/n)"
@@ -134,30 +73,23 @@ if ($confirmation -notin @('y','Y')) {
     exit 0
 }
 
-# Delete manifests and artifacts for each app in each family
-foreach ($fam in $impactedApps.Keys) {
-    foreach ($app in $impactedApps[$fam]) {
-        $manifestPath = "$bucket\$app.json"
-        if (Test-Path $manifestPath) {
-            Remove-Item $manifestPath -Force
-            Write-Host "Deleted manifest: $manifestPath" -ForegroundColor Yellow
-        }
-        if (Test-Path $outdir) {
-            Get-ChildItem -Path $outdir -Filter "$app-*.zip" | Remove-Item -Force
-            Write-Host "Deleted artifacts for $app in $outdir" -ForegroundColor Yellow
-        }
-    }
-}
-
-# Clean plugins\onemore
-foreach ($plugin in $impactedPlugins) {
-    $manifestPath = "$bucket\$plugin.json"
+# Delete manifests and artifacts for each filtered tool
+foreach ($toolObj in $filteredTools) {
+    $manifestPath = $toolObj.Path
     if (Test-Path $manifestPath) {
-        Remove-Item $manifestPath -Force
+        Remove-Item $manifestPath -Force -ErrorAction SilentlyContinue
         Write-Host "Deleted manifest: $manifestPath" -ForegroundColor Yellow
     }
+    # Remove artifacts (zip) for the app/plugin
+    $artifactPattern = "$($toolObj.App)-*.zip"
+    if ($toolObj.Family -eq "plugin") {
+        $artifactPattern = "$($toolObj.App)-*.zip"
+    }
     if (Test-Path $outdir) {
-        Get-ChildItem -Path $outdir -Filter "$plugin-*.zip" | Remove-Item -Force
-        Write-Host "Deleted artifacts for plugin $plugin in $outdir" -ForegroundColor Yellow
+        $zips = Get-ChildItem -Path $outdir -Filter $artifactPattern -File -ErrorAction SilentlyContinue
+        if ($zips) {
+            $zips | Remove-Item -Force -ErrorAction SilentlyContinue
+            Write-Host "Deleted artifacts for $($toolObj.App) in $outdir" -ForegroundColor Yellow
+        }
     }
 }

@@ -18,10 +18,10 @@ The build scripts automate the full lifecycle for tools and plugins, including:
 - **Scaffolding:** Quickly create new tool/plugin skeletons with `dev-new-tool.cmd` and `dev-new-plugin.cmd`.
 - **Building & Publishing:** Package sources, compute hashes, and update Scoop manifests with `bucket-publish.cmd`/`.ps1`.
 - **Bucket Synchronization:** Remove obsolete manifests and publish new/changed ones with `bucket-scan-update.cmd`/`.ps1`.
-- **Deployment & Updates:** Automatically update installed tools to match the latest manifest versions with `bucket-auto-update.cmd`/`.ps1`.
+- **Deployment & Updates:** Automatically update installed tools to match the latest manifest versions with `bucket-deploy.cmd`/`.ps1`.
 - **Version Checking:** Compare deployed tool/plugin versions with bucket manifests using `bucket-check-version.cmd`/`.ps1`.
 - **Artifact Cleanup:** Remove published artifacts and manifests with `bucket-clean-artifacts.ps1`.
-- **Listing & Initialization:** List all tools, initialize monorepo and tools root structure, and unblock scripts as needed.
+- **Listing & Initialization:** List all tools, initialize monorepo and tools root structure, unblock scripts, and touch files as needed.
 
 **Scoop Integration Highlights:**
 - All installable tools/plugins are described in `meibye-bucket/bucket/` manifests.
@@ -79,46 +79,22 @@ This allows Scoop to discover and install tools described in the bucket's manife
 
 ## Script Overview
 
-- **dev-find-powershell.cmd**  
-  Shared helper script used by other `.cmd` scripts to locate and run the corresponding PowerShell script, forwarding all user arguments correctly.
-
-- **dev-init-tools-root.cmd**  
-  Initializes the `C:\Tools` directory structure for tool deployment (creates `apps\ps`, `apps\py`, etc.).
-
-- **dev-init-monorepo.cmd**  
-  Sets up the monorepo folder structure, including plugins and tools, with example folders and README files.
-
-- **dev-new-tool.cmd**  
-  Scaffolds a new tool (PowerShell, Python, CMD, Bash, Zsh) in the monorepo under `tools\<family>\<app>\src`, creating the necessary folders, a starter script, and updating the README.
-
-- **dev-new-plugin.cmd**  
-  Scaffolds a new OneMore plugin under `plugins\onemore\<PluginName>\src`, with a starter script and README.
-
-- **dev-list-tools.cmd**  
-  Lists all developed tools in the monorepo, showing their family and app names in a formatted table.
-
-- **dev-print-path.ps1**  
-  Prints each entry in the current `PATH` environment variable.
-
-- **dev-unblock-script.ps1**  
-  Unblocks a specified file to allow script execution (removes Zone.Identifier).
-
-- **bucket-publish.cmd / bucket-publish.ps1**  
-  Builds and publishes all tools and plugins: zips their source folders, computes hashes, and updates or creates manifests in the local Scoop bucket.
-
-- **bucket-scan-update.cmd / bucket-scan-update.ps1**  
-  Scans the monorepo for new, updated, or deleted tools/plugins and updates the bucket manifests accordingly (removes obsolete manifests, adds new ones, and triggers builds for changed items).
-
-- **bucket-auto-update.cmd / bucket-auto-update.ps1**  
-  Checks all deployed tools against their manifests and updates them if a newer version is available (extracts new artifacts and updates symlinks).
-
-- **bucket-check-version.cmd / bucket-check-version.ps1**  
-  Displays the version of a specified tool as defined in the bucket manifest and the currently deployed version.
-
-- **bucket-clean-artifacts.ps1**  
-  Deletes published manifests and artifacts from the bucket and `out\artifacts` folder.  
-  Lists only apps (tools/plugins) that currently have artifacts or manifests to delete, grouped by family, and asks for confirmation before proceeding.  
-  Supports an optional `-App` parameter to restrict deletion to a specific app.
+| Script | Parameters | Description |
+|--------|------------|-------------|
+| **dev-find-powershell.cmd** | `ScriptName`, `Extension`, `[Args...]` | Locates and runs the corresponding PowerShell script, forwarding all user arguments. |
+| **dev-init-tools-root.cmd** | `[Root]` | Initializes the tools root folder. <br>**Root:** Optional path for tools (default: `C:\Tools`). |
+| **dev-init-monorepo.cmd** | `[RepoRoot|defrepo]` | Sets up the monorepo folder structure. <br>**RepoRoot:** Optional repo root, or 'defrepo' to auto-select D: or C:. |
+| **dev-new-tool.cmd** | `<RepoRoot|defrepo> <Family> <App> [Tool]` | Scaffolds a new tool in the monorepo. <br>**RepoRoot:** Repo root or 'defrepo'. <br>**Family:** Tool type (`ps`, `py`, `cmd`, `bash`, `zsh`). <br>**App:** Folder grouping. <br>**Tool:** (Optional) tool source file name. |
+| **dev-new-plugin.cmd** | `<RepoRoot|defrepo> <PluginName>` | Scaffolds a new OneMore plugin. <br>**RepoRoot:** Repo root or 'defrepo'. <br>**PluginName:** Name of the plugin. |
+| **dev-list-tools.cmd** | `[RepoRoot|defrepo]` | Lists all developed tools in the monorepo. <br>**RepoRoot:** Optional repo root, or 'defrepo'. |
+| **dev-print-path.ps1** | *(none)* | Prints each entry in the current `PATH` environment variable. |
+| **dev-unblock-script.ps1** | `-Path <FilePath>` | Unblocks a specified file to allow script execution. <br>**Path:** Path to the file. |
+| **dev-touch-file.ps1** | `-Path <FilePath>` | Updates the modification date and time of a file to now. <br>**Path:** Path to the file. |
+| **bucket-publish.cmd / bucket-publish.ps1** | `-Version <version>`, `-OnlyChanged`, `-CommitAndSync`, `-Family <family>`, `-App <app>`, `-Tool <tool>`, `-ShowVersions` | Builds and publishes all tools and plugins. <br>**Version:** Version string for artifacts. <br>**OnlyChanged:** Only publish changed items. <br>**CommitAndSync:** Commit/push manifests to git. <br>**Family/App/Tool:** Filter by family/app/tool. <br>**ShowVersions:** Show all considered versions for each app. |
+| **bucket-scan-update.cmd / bucket-scan-update.ps1** | `-NoPublish` | Scans for new/changed/deleted tools/plugins and updates bucket manifests. <br>**NoPublish:** Skip publishing, only cleanup. |
+| **bucket-deploy.cmd / bucket-deploy.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Deploys and updates installed tools according to bucket manifests. <br>**Family/App/Tool:** Filter by family/app/tool. |
+| **bucket-check-version.cmd / bucket-check-version.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Displays the version in the bucket manifest and the deployed version. <br>**Family/App/Tool:** Filter by family/app/tool. |
+| **bucket-clean-artifacts.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Deletes published manifests and artifacts from the bucket and artifacts folder. <br>**Family/App/Tool:** Filter by family/app/tool. |
 
 ---
 
@@ -144,7 +120,7 @@ This allows Scoop to discover and install tools described in the bucket's manife
      This removes manifests for deleted tools/plugins and publishes new/changed ones.
 
 5. **Deploy or Update Tools**
-   - Run `bucket-auto-update.cmd`  
+   - Run `bucket-deploy.cmd`  
      This checks for new versions and updates the deployed tools in `C:\Tools\apps`.
 
 6. **Check Tool Version**
@@ -154,6 +130,10 @@ This allows Scoop to discover and install tools described in the bucket's manife
 7. **Clean Publish Artifacts (Optional)**  
    - Run `bucket-clean-artifacts.ps1 -App <AppName>`  
      Deletes published artifacts and manifests for the specified app.
+
+8. **Other Utilities**
+   - Use `dev-touch-file.ps1` to update file modification timestamps.
+   - Use `dev-unblock-script.ps1` to unblock downloaded scripts.
 
 ---
 
@@ -250,7 +230,9 @@ dev-new-tool.cmd defrepo py my-py-tool
 bucket-publish.cmd -Version 0.1.1
 bucket-scan-update.cmd
 
-bucket-auto-update.cmd
+bucket-deploy.cmd
 bucket-check-version.cmd -App my-py-tool
 bucket-clean-artifacts.ps1 -App my-py-tool
+dev-touch-file.ps1 -Path "C:\path\to\yourfile.txt"
+dev-unblock-script.ps1 -Path "C:\path\to\file.ps1"
 ```

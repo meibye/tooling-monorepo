@@ -1,21 +1,26 @@
 <#
 .SYNOPSIS
-    Displays the version of a specified tool as defined in the bucket manifest and the currently deployed version.
+    Shows the version from the bucket manifest and the deployed version for a specified tool/app.
 .DESCRIPTION
-    [bucket-check-version.ps1] Checks the version of a given tool/app by reading its manifest from a local bucket directory and compares it to the version currently deployed in the apps directory.
+    [bucket-check-version.ps1] Reads the manifest for a tool/app from a local bucket directory, displays its version, and compares it to the version currently deployed in the apps directory. Supports filtering by Family, App, and Tool.
+.PARAMETER Family
+    Optional. Tool type (e.g., ps, py, cmd, bash, zsh, plugin). Use "*" for all types.
 .PARAMETER App
-    The name of the tool/app to check (without file extension).
+    Required. Name of the tool/app to check (without file extension).
+.PARAMETER Tool
+    Optional. Source file name including extension. Use "*" for all.
 .EXAMPLE
     .\bucket-check-version.ps1 -App my-ps-tool
-    Shows the version in the bucket and the deployed version for 'my-ps-tool'.
+    .\bucket-check-version.ps1 -Family ps -App tools -Tool dev-print-path.ps1
 #>
 param(
-    [Parameter(Mandatory)]
-    [string]$App
+    [string]$Family = "*",
+    [string]$App = "*",
+    [string]$Tool = "*"
 )
 
 # --- argument validation ---
-$allowed = @('App')
+$allowed = @('Family','App','Tool')
 $invalid = @()
 if ($PSBoundParameters) {
     $invalid += $PSBoundParameters.Keys | Where-Object { $allowed -notcontains $_ }
@@ -32,57 +37,92 @@ if ($args) {
 }
 $invalid = $invalid | Select-Object -Unique
 if ($invalid.Count -gt 0) {
-    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -App"
+    Write-Error "Invalid argument(s): $($invalid -join ', ')`nSupported arguments: -Family -App -Tool"
     exit 2
 }
 
 try {
-    # Check bucket path
     $bucket = 'D:\Dev\meibye-bucket\bucket'
-    if (-not (Test-Path $bucket)) {
-        $bucket = 'C:\Dev\meibye-bucket\bucket'
-    }
+    if (-not (Test-Path $bucket)) { $bucket = 'C:\Dev\meibye-bucket\bucket' }
     if (-not (Test-Path $bucket)) {
         Write-Error "Bucket path not found: D:\Dev\meibye-bucket\bucket or C:\Dev\meibye-bucket\bucket"
         exit 1
     }
 
-    $manifest = "$bucket\$App.json"
-    if (-not (Test-Path $manifest)) {
-        Write-Error "No manifest for $App at $manifest"
+    # Use dev-filter-tool.ps1 to find relevant manifest(s)
+    $filterScript = Join-Path $PSScriptRoot 'dev-filter-tool.ps1'
+    $filtered = & $filterScript -Type bucket -Location $bucket -Family $Family -App $App -Tool $Tool
+
+    if (-not $filtered -or $filtered.Count -eq 0) {
+        Write-Error "No matching manifest found for Family='$Family', App='$App', Tool='$Tool'"
         exit 1
     }
 
-    try {
-        $man = Get-Content $manifest -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-    } catch {
-        Write-Error "Failed to read or parse manifest: $_"
-        exit 1
-    }
+    $results = @()
+    foreach ($toolObj in $filtered) {
+        $manifest = $toolObj.Path
+        $toolName = $toolObj.Tool
+        $appName = $toolObj.App
+        $famName = $toolObj.Family
 
-    Write-Host "$App version in bucket: $($man.version)" -ForegroundColor Yellow
-
-    # Check deployed path
-    $appsRoot = 'C:\Tools\apps'
-    if (-not (Test-Path $appsRoot)) {
-        $appsRoot = 'D:\Tools\apps'
-    }
-    if (-not (Test-Path $appsRoot)) {
-        Write-Error "Apps root path not found: C:\Tools\apps or D:\Tools\apps"
-        exit 1
-    }
-
-    $deployed = Get-ChildItem "$appsRoot\*\$App\current" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($deployed) {
+        $bucketVersion = ""
+        $deployedVersion = ""
         try {
-            $ver = Split-Path ($deployed.Target) -Leaf
-            Write-Host "$App deployed version: $ver" -ForegroundColor Green
+            $man = Get-Content $manifest -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+            $bucketVersion = $man.version
         } catch {
-            Write-Error "Failed to determine deployed version: $_"
+            $bucketVersion = "<manifest error>"
         }
-    } else {
-        Write-Warning "$App is not currently deployed."
+
+        $appsRoot = 'C:\Tools\apps'
+        if (-not (Test-Path $appsRoot)) { $appsRoot = 'D:\Tools\apps' }
+        if (-not (Test-Path $appsRoot)) {
+            $deployedVersion = "<apps root not found>"
+        } else {
+            $deployed = Get-ChildItem "$appsRoot\*\$appName\current" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($deployed) {
+                try {
+                    $deployedVersion = Split-Path ($deployed.Target) -Leaf
+                } catch {
+                    $deployedVersion = "<deployed version error>"
+                }
+            } else {
+                $deployedVersion = "<not deployed>"
+            }
+        }
+
+        $results += [PSCustomObject]@{
+            Family = $famName
+            App = $appName
+            Script = $toolName
+            BucketVersion = $bucketVersion
+            DeployedVersion = $deployedVersion
+            Differs = ($bucketVersion -ne $deployedVersion)
+        }
     }
+
+    if ($results.Count -eq 0) {
+        Write-Host "No matching manifest found for Family='$Family', App='$App', Tool='$Tool'" -ForegroundColor Yellow
+        exit 1
+    }
+
+    # Print table header
+    $header = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18}" -f "Family", "App", "Script", "BucketVersion", "DeployedVersion"
+    Write-Host $header -ForegroundColor Cyan
+    Write-Host ("-" * ($header.Length + 2)) -ForegroundColor Cyan
+
+    # Sort results by Family, then App
+    $results | Sort-Object Family, App | ForEach-Object {
+        $row = $_
+        $line = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18}" -f $row.Family, $row.App, $row.Script, $row.BucketVersion, $row.DeployedVersion
+        if ($row.Differs -and $row.BucketVersion -notmatch "^<" -and $row.DeployedVersion -notmatch "^<") {
+            Write-Host $line -ForegroundColor Yellow
+        } else {
+            Write-Host $line
+        }
+    }
+    Write-Host ""
+
 } catch {
     Write-Error "Unexpected error: $_"
     exit 1
