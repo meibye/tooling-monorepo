@@ -1,7 +1,7 @@
 # Build Folder – Tooling Monorepo
 
 This folder contains **Windows CMD** and PowerShell scripts to manage the runtime tree at `C:\Tools` and the monorepo at `D:\Dev\tooling-monorepo` or `C:\Dev\tooling-monorepo`.  
-These scripts automate scaffolding, building, publishing, deployment, and version management for both standalone tools and OneMore plugins.
+These scripts automate scaffolding, building, publishing, deployment, version management, and developer utilities for both standalone tools and OneMore plugins.
 
 > **Important:**  
 > The scripts in the `build/` folder are **developer utilities only**.  
@@ -22,11 +22,8 @@ The build scripts automate the full lifecycle for tools and plugins, including:
 - **Version Checking:** Compare deployed tool/plugin versions with bucket manifests using `bucket-check-version.cmd`/`.ps1`.
 - **Artifact Cleanup:** Remove published artifacts and manifests with `bucket-clean-artifacts.ps1`.
 - **Listing & Initialization:** List all tools, initialize monorepo and tools root structure, unblock scripts, and touch files as needed.
-
-**Scoop Integration Highlights:**
-- All installable tools/plugins are described in `meibye-bucket/bucket/` manifests.
-- The build scripts ensure that published artifacts and manifests are always in sync with the source tree.
-- End-users install and update tools via Scoop, while developers use these scripts to manage the lifecycle.
+- **Filtering:** Use `dev-filter-tool.ps1` to filter tools and manifests by family, app, and tool.
+- **Other Utilities:** Print the PATH, unblock scripts, update file timestamps, etc.
 
 ---
 
@@ -83,17 +80,18 @@ This allows Scoop to discover and install tools described in the bucket's manife
 |--------|------------|-------------|
 | **dev-find-powershell.cmd** | `ScriptName`, `Extension`, `[Args...]` | Locates and runs the corresponding PowerShell script, forwarding all user arguments. |
 | **dev-init-tools-root.cmd** | `[Root]` | Initializes the tools root folder. <br>**Root:** Optional path for tools (default: `C:\Tools`). |
-| **dev-init-monorepo.cmd** | `[RepoRoot|defrepo]` | Sets up the monorepo folder structure. <br>**RepoRoot:** Optional repo root, or 'defrepo' to auto-select D: or C:. |
-| **dev-new-tool.cmd** | `<RepoRoot|defrepo> <Family> <App> [Tool]` | Scaffolds a new tool in the monorepo. <br>**RepoRoot:** Repo root or 'defrepo'. <br>**Family:** Tool type (`ps`, `py`, `cmd`, `bash`, `zsh`). <br>**App:** Folder grouping. <br>**Tool:** (Optional) tool source file name. |
-| **dev-new-plugin.cmd** | `<RepoRoot|defrepo> <PluginName>` | Scaffolds a new OneMore plugin. <br>**RepoRoot:** Repo root or 'defrepo'. <br>**PluginName:** Name of the plugin. |
-| **dev-list-tools.cmd** | `[RepoRoot|defrepo]` | Lists all developed tools in the monorepo. <br>**RepoRoot:** Optional repo root, or 'defrepo'. |
+| **dev-init-monorepo.cmd** | `[RepoRoot\|defrepo]` | Sets up the monorepo folder structure. <br>**RepoRoot:** Optional repo root, or 'defrepo' to auto-select D: or C:. |
+| **dev-new-tool.cmd** | `<RepoRoot\|defrepo> <Family> <App> [Tool]` | Scaffolds a new tool in the monorepo. <br>**RepoRoot:** Repo root or 'defrepo'. <br>**Family:** Tool type (`ps`, `py`, `cmd`, `bash`, `zsh`). <br>**App:** Folder grouping. <br>**Tool:** (Optional) tool source file name. |
+| **dev-new-plugin.cmd** | `<RepoRoot\|defrepo> <PluginName>` | Scaffolds a new OneMore plugin. <br>**RepoRoot:** Repo root or 'defrepo'. <br>**PluginName:** Name of the plugin. |
+| **dev-list-tools.cmd** | `[RepoRoot\|defrepo]` | Lists all developed tools in the monorepo. <br>**RepoRoot:** Optional repo root, or 'defrepo'. |
 | **dev-print-path.ps1** | *(none)* | Prints each entry in the current `PATH` environment variable. |
 | **dev-unblock-script.ps1** | `-Path <FilePath>` | Unblocks a specified file to allow script execution. <br>**Path:** Path to the file. |
 | **dev-touch-file.ps1** | `-Path <FilePath>` | Updates the modification date and time of a file to now. <br>**Path:** Path to the file. |
-| **bucket-publish.cmd / bucket-publish.ps1** | `-Version <version>`, `-OnlyChanged`, `-CommitAndSync`, `-Family <family>`, `-App <app>`, `-Tool <tool>`, `-ShowVersions` | Builds and publishes all tools and plugins. <br>**Version:** Version string for artifacts. <br>**OnlyChanged:** Only publish changed items. <br>**CommitAndSync:** Commit/push manifests to git. <br>**Family/App/Tool:** Filter by family/app/tool. <br>**ShowVersions:** Show all considered versions for each app. |
+| **dev-filter-tool.ps1** | `-Type <dev\|bucket>`, `-Location <path>`, `-Family <family>`, `-App <app>`, `-Tool <tool>` | Returns a table/list of tool script paths filtered by family, app, and tool. Used by other build scripts. |
+| **bucket-publish.cmd / bucket-publish.ps1** | `-Version <version>`, `-OnlyChanged`, `-CommitAndSync`, `-Family <family>`, `-App <app>`, `-Tool <tool>`, `-ShowVersions` | Builds and publishes all tools and plugins. <br>**Version:** Version string for artifacts. <br>**OnlyChanged:** Only publish changed items. <br>**CommitAndSync:** Commit/push manifests and zips to git. <br>**Family/App/Tool:** Filter by family/app/tool. <br>**ShowVersions:** Show all considered versions for each app. |
 | **bucket-scan-update.cmd / bucket-scan-update.ps1** | `-NoPublish` | Scans for new/changed/deleted tools/plugins and updates bucket manifests. <br>**NoPublish:** Skip publishing, only cleanup. |
 | **bucket-deploy.cmd / bucket-deploy.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Deploys and updates installed tools according to bucket manifests. <br>**Family/App/Tool:** Filter by family/app/tool. |
-| **bucket-check-version.cmd / bucket-check-version.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Displays the version in the bucket manifest and the deployed version. <br>**Family/App/Tool:** Filter by family/app/tool. |
+| **bucket-check-version.cmd / bucket-check-version.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Displays the version in the bucket manifest and the deployed version. Also lists available artifact versions (local and GitHub), grouping more than 5 per line. |
 | **bucket-clean-artifacts.ps1** | `-Family <family>`, `-App <app>`, `-Tool <tool>` | Deletes published manifests and artifacts from the bucket and artifacts folder. <br>**Family/App/Tool:** Filter by family/app/tool. |
 
 ---
@@ -125,7 +123,7 @@ This allows Scoop to discover and install tools described in the bucket's manife
 
 6. **Check Tool Version**
    - Run `bucket-check-version.cmd -App <AppName>`  
-     Shows the version in the bucket and the currently deployed version.
+     Shows the version in the bucket and the currently deployed version, and lists available artifact versions.
 
 7. **Clean Publish Artifacts (Optional)**  
    - Run `bucket-clean-artifacts.ps1 -App <AppName>`  
@@ -207,6 +205,90 @@ scoop uninstall MoveWindowToNextDesktop
 - Use the build scripts in this folder to scaffold, build, and publish new versions.
 - After publishing, run `scoop update` to make the new version available to users.
 - End-users only need to use Scoop commands; developers use the scripts in `build/` for management.
+
+---
+
+## Testing the Build Scripts
+
+To ensure reliability and maintainability, you can add **unit tests** for the PowerShell scripts in the `build` folder using [Pester](https://pester.dev/), the standard PowerShell testing framework.
+
+### Recommended Approach
+
+1. **Create a `tests/` folder inside `build/`**  
+   Place all test scripts in `d:\Dev\tooling-monorepo\build\tests\`.
+
+2. **Write Pester tests for each script**  
+   For each `.ps1` script, create a corresponding `*.Tests.ps1` file.  
+   Example:  
+   - `bucket-publish.ps1` → `tests/bucket-publish.Tests.ps1`
+   - `dev-filter-tool.ps1` → `tests/dev-filter-tool.Tests.ps1`
+
+3. **Test Structure Example**
+
+   ```powershell
+   # filepath: d:\Dev\tooling-monorepo\build\tests\dev-filter-tool.Tests.ps1
+   Describe "dev-filter-tool.ps1" {
+       It "Returns tools for default parameters" {
+           $result = & "$PSScriptRoot\..\dev-filter-tool.ps1"
+           $result | Should -Not -BeNullOrEmpty
+       }
+       It "Filters by Family" {
+           $result = & "$PSScriptRoot\..\dev-filter-tool.ps1" -Family ps
+           $result | Should -All { $_.Family -eq "ps" }
+       }
+       # Add more tests for App, Tool, error handling, etc.
+   }
+   ```
+
+4. **Mocking and Isolation**  
+   - Use Pester's `Mock` and `InModuleScope` to isolate file system operations.
+   - Use temporary folders/files for destructive tests (e.g., artifact cleanup).
+   - Avoid running tests that modify real artifacts or buckets unless in a CI/test environment.
+
+5. **Run All Tests**
+
+   From the `build` folder, run:
+
+   ```powershell
+   Invoke-Pester -Path .\tests
+   ```
+
+   Or, for a single test file:
+
+   ```powershell
+   Invoke-Pester -Path .\tests\bucket-publish.Tests.ps1
+   ```
+
+6. **Continuous Integration**  
+   - Integrate Pester tests into your CI pipeline (e.g., GitHub Actions, Azure DevOps).
+   - Fail builds if any test fails.
+
+---
+
+**Note:**  
+For `.cmd` scripts, you can create wrapper PowerShell tests that invoke the `.cmd` file and check the output, exit code, or side effects.
+
+**Example:**
+```powershell
+Describe "dev-list-tools.cmd" {
+    It "Runs and outputs expected header" {
+        $output = & cmd /c "$PSScriptRoot\..\dev-list-tools.cmd"
+        $output | Should -Match "Family"
+    }
+}
+```
+
+---
+
+**Summary Table**
+
+| Script                | Test File                                 | Notes                        |
+|-----------------------|-------------------------------------------|------------------------------|
+| bucket-publish.ps1    | tests/bucket-publish.Tests.ps1            | Use mocks for file ops       |
+| bucket-scan-update.ps1| tests/bucket-scan-update.Tests.ps1        | Use temp dirs for manifests  |
+| dev-filter-tool.ps1   | tests/dev-filter-tool.Tests.ps1           | Test all filter params       |
+| dev-list-tools.cmd    | tests/dev-list-tools.Tests.ps1            | Test output parsing          |
+| ...                   | ...                                       | ...                          |
 
 ---
 

@@ -2,7 +2,10 @@
 .SYNOPSIS
     Shows the version from the bucket manifest and the deployed version for a specified tool/app.
 .DESCRIPTION
-    [bucket-check-version.ps1] Reads the manifest for a tool/app from a local bucket directory, displays its version, and compares it to the version currently deployed in the apps directory. Supports filtering by Family, App, and Tool.
+    [bucket-check-version.ps1] Reads the manifest for a tool/app from a local bucket directory, displays its version, and compares it to the version currently deployed in the apps directory.
+    Also lists all available artifact versions for the app/tool in the local out/artifacts folder and on GitHub.
+    If more than 5 versions are available, they are printed as comma-separated groups on separate lines.
+    Supports filtering by Family, App, and Tool.
 .PARAMETER Family
     Optional. Tool type (e.g., ps, py, cmd, bash, zsh, plugin). Use "*" for all types.
 .PARAMETER App
@@ -41,6 +44,53 @@ if ($invalid.Count -gt 0) {
     exit 2
 }
 
+function Get-GitHubVersions {
+    param($repoName, $appName)
+    try {
+        # Example curl command to test GitHub API for artifact versions:
+        # curl -H "User-Agent: tooling-monorepo-script" https://api.github.com/repos/meibye/tooling-monorepo/contents/out/artifacts
+        $apiUrl = "https://api.github.com/repos/$repoName/contents/out/artifacts"
+        $headers = @{ "User-Agent" = "tooling-monorepo-script" }
+        $contents = Invoke-RestMethod -Uri $apiUrl -Headers $headers -ErrorAction Stop
+
+        $pattern = "$appName-(\d+\.\d+\.\d+)\.zip"
+        $versions = @()
+        foreach ($item in $contents) {
+            if ($item.name -match $pattern) {
+                $versions += $matches[1]
+            }
+        }
+        return $versions
+    } catch {
+        return @()
+    }
+}
+
+function Get-LocalArtifactVersions {
+    param($outdir, $appName)
+    $versions = @()
+    if (Test-Path $outdir) {
+        $files = Get-ChildItem -Path $outdir -Filter "$appName-*.zip" -File -ErrorAction SilentlyContinue
+        foreach ($file in $files) {
+            if ($file.Name -match "$appName-(\d+\.\d+\.\d+)\.zip") {
+                $versions += $matches[1]
+            }
+        }
+    }
+    return $versions
+}
+
+function Format-VersionList {
+    param($versions, $maxPerLine = 5)
+    $result = @()
+    $versions = @($versions)
+    for ($i = 0; $i -lt $versions.Count; $i += $maxPerLine) {
+        $chunk = $versions[$i..([Math]::Min($i+$maxPerLine-1, $versions.Count-1))]
+        $result += ($chunk -join ', ')
+    }
+    return $result
+}
+
 try {
     $bucket = 'D:\Dev\meibye-bucket\bucket'
     if (-not (Test-Path $bucket)) { $bucket = 'C:\Dev\meibye-bucket\bucket' }
@@ -48,6 +98,10 @@ try {
         Write-Error "Bucket path not found: D:\Dev\meibye-bucket\bucket or C:\Dev\meibye-bucket\bucket"
         exit 1
     }
+
+    $repo = 'D:\Dev\tooling-monorepo'
+    if (-not (Test-Path $repo)) { $repo = 'C:\Dev\tooling-monorepo' }
+    $outdir = "$repo\out\artifacts"
 
     # Use dev-filter-tool.ps1 to find relevant manifest(s)
     $filterScript = Join-Path $PSScriptRoot 'dev-filter-tool.ps1'
@@ -67,6 +121,7 @@ try {
 
         $bucketVersion = ""
         $deployedVersion = ""
+        $githubVersions = @()
         try {
             $man = Get-Content $manifest -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
             $bucketVersion = $man.version
@@ -91,12 +146,18 @@ try {
             }
         }
 
+        # Get GitHub versions (replace repo name if needed)
+        $githubVersions = @(Get-GitHubVersions "meibye/tooling-monorepo" $appName)
+        $localVersions = @(Get-LocalArtifactVersions $outdir $appName)
+
         $results += [PSCustomObject]@{
             Family = $famName
             App = $appName
             Script = $toolName
             BucketVersion = $bucketVersion
             DeployedVersion = $deployedVersion
+            GitHubVersions = $githubVersions
+            LocalVersions = $localVersions
             Differs = ($bucketVersion -ne $deployedVersion)
         }
     }
@@ -107,18 +168,34 @@ try {
     }
 
     # Print table header
-    $header = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18}" -f "Family", "App", "Script", "BucketVersion", "DeployedVersion"
+    $header = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18} {5,-30} {6,-30}" -f "Family", "App", "Script", "BucketVersion", "DeployedVersion", "GitHubVersions", "LocalVersions"
     Write-Host $header -ForegroundColor Cyan
     Write-Host ("-" * ($header.Length + 2)) -ForegroundColor Cyan
 
     # Sort results by Family, then App
     $results | Sort-Object Family, App | ForEach-Object {
         $row = $_
-        $line = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18}" -f $row.Family, $row.App, $row.Script, $row.BucketVersion, $row.DeployedVersion
-        if ($row.Differs -and $row.BucketVersion -notmatch "^<" -and $row.DeployedVersion -notmatch "^<") {
-            Write-Host $line -ForegroundColor Yellow
-        } else {
-            Write-Host $line
+        $ghChunks = @(Format-VersionList $row.GitHubVersions)
+        $localChunks = @(Format-VersionList $row.LocalVersions)
+        $maxLines = [Math]::Max($ghChunks.Count, $localChunks.Count)
+        for ($i = 0; $i -lt $maxLines; $i++) {
+            $ghLine = ($i -lt $ghChunks.Count) ? $ghChunks[$i] : ""
+            $localLine = ($i -lt $localChunks.Count) ? $localChunks[$i] : ""
+            if ($i -eq 0) {
+                $line = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18} {5,-30} {6,-30}" -f $row.Family, $row.App, $row.Script, $row.BucketVersion, $row.DeployedVersion, $ghLine, $localLine
+                if ($row.Differs -and $row.BucketVersion -notmatch "^<" -and $row.DeployedVersion -notmatch "^<") {
+                    Write-Host $line -ForegroundColor Yellow
+                } else {
+                    Write-Host $line
+                }
+            } else {
+                $line = "{0,-10} {1,-30} {2,-35} {3,-18} {4,-18} {5,-30} {6,-30}" -f "", "", "", "", "", $ghLine, $localLine
+                if ($row.Differs -and $row.BucketVersion -notmatch "^<" -and $row.DeployedVersion -notmatch "^<") {
+                    Write-Host $line -ForegroundColor Yellow
+                } else {
+                    Write-Host $line
+                }
+            }
         }
     }
     Write-Host ""
