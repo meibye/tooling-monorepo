@@ -103,7 +103,7 @@ This allows Scoop to discover and install tools described in the bucket's manife
      Run `dev-new-plugin.cmd defrepo <PluginName>`
    - For a tool:  
      Run `dev-new-tool.cmd defrepo <Family> <App> [Tool]`  
-     (Family: `ps`, `py`, `cmd`, `bash`, `zsh`)
+     (Family: `ps`, `py`, `cmd`, `bash`
 
 2. **Develop Your Script(s)**
    - Edit your scripts in the created `src` folder.
