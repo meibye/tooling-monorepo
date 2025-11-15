@@ -62,7 +62,7 @@ build/bucket-deploy.cmd
 ```
 
 ## Testing
-- Use [Pester](https://pester.dev/) for PowerShell script tests in `build/tests/`.
+- Use [Pester](https://pester.dev/) (external site) for PowerShell script tests in `build/tests/`.
 - For `.cmd` scripts, create wrapper PowerShell tests that invoke the `.cmd` and check output.
 
 ---

@@ -82,7 +82,7 @@ if /I "%FAMILY%"=="py" (
     if exist "%BASE%\%TOOLFILE%.py" (
         echo "%BASE%\%TOOLFILE%.py" already exists.
     ) else (
-        > "%BASE%\%TOOLFILE%.py" echo print("%TOOLFILE%")
+        > "%BASE%\%TOOLFILE%.py" echo print("%TOOLFILE%"^)
         echo Created "%BASE%\%TOOLFILE%.py"
     )
 )

@@ -164,6 +164,16 @@ Scoop will:
 - Extract it to the appropriate folder under `C:\Users\<User>\scoop\apps\<AppName>\<Version>\`.
 - Create a shim (shortcut) in `%USERPROFILE%\scoop\shims` for each executable/script listed in the manifest's `bin` array.
 
+### 2a. List Installed Applications
+
+To see all applications currently installed via Scoop:
+
+```powershell
+scoop list
+```
+
+This command displays a table of installed apps, their versions, and the buckets they came from.
+
 ### 3. Run the Application
 
 After installation, you can run the tool from any command prompt or PowerShell window:

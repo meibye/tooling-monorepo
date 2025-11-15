@@ -7,6 +7,23 @@ It provides a simple, interactive way to install popular software, tweak system 
 
 ---
 
+## Scripts in This Folder
+
+This folder contains the following scripts:
+
+- **winutil.ps1**  
+  Installs or updates Windows utilities using Chris Titus Tech's script.  
+  Downloads and executes the Windows utility setup script from https://christitus.com/win.  
+  Must be run in PowerShell Core (`pwsh`).
+
+- **dev-unblock-script.ps1**  
+  Unblocks a specified file to allow script execution (removes the "blocked" status/Zone.Identifier).
+
+- **dev-print-path.ps1**  
+  Prints each entry in the current `PATH` environment variable, one per line.
+
+---
+
 ## Scripts in the `src` Folder
 
 This folder contains the following scripts:
