@@ -156,6 +156,7 @@ scoop bucket add meibye https://github.com/meibye/meibye-bucket
 To install a tool or plugin (e.g., `MoveWindowToNextDesktop`):
 
 ```powershell
+scoop update            # Needed after update and commit to repo
 scoop install MoveWindowToNextDesktop
 ```
 
