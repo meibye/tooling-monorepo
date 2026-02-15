@@ -202,6 +202,7 @@ Or update a specific tool:
 ```powershell
 scoop update MoveWindowToNextDesktop
 ```
+Add -f if the script has been updated but still have the same version.
 
 ### 5. Uninstall Applications
 
